@@ -34,7 +34,7 @@ func (h *Handler) Clima(w http.ResponseWriter, r *http.Request) {
 	escrever(w, http.StatusOK, previsao)
 }
 
-// As mensagens ficam em inglês porque o contrato do desafio pede assim.
+// As mensagens de erro seguem o contrato da API e ficam em inglês.
 func respostaDeErro(err error) (int, string) {
 	switch {
 	case errors.Is(err, clima.ErrCEPinvalido):

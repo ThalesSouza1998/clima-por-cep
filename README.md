@@ -2,6 +2,10 @@
 
 API em Go que recebe um CEP, descobre a cidade no [ViaCEP](https://viacep.com.br) e busca a temperatura atual na [WeatherAPI](https://www.weatherapi.com). A resposta vem em Celsius, Fahrenheit e Kelvin.
 
+**Repositório:** https://github.com/ThalesSouza1998/clima-por-cep
+
+**URL publicada:** https://clima-por-cep-429122214318.us-central1.run.app
+
 Fiz o projeto para o desafio do curso Go Expert, mas ele serve como base para qualquer consulta que precise cruzar CEP com clima.
 
 ## Uso
@@ -14,7 +18,7 @@ curl "http://localhost:8080/?cep=01001000"
 {
   "temp_C": 28.5,
   "temp_F": 83.3,
-  "temp_K": 301.65
+  "temp_K": 301.5
 }
 ```
 
@@ -23,7 +27,7 @@ curl "http://localhost:8080/?cep=01001000"
 | CEP fora do formato de 8 dígitos | 422 | `{"error":"invalid zipcode"}` |
 | CEP válido que o ViaCEP não conhece | 404 | `{"error":"can not find zipcode"}` |
 
-As mensagens de erro continuam em inglês porque o contrato do desafio é assim. O Fahrenheit sai com uma casa decimal e o Kelvin com duas.
+As mensagens de erro seguem o contrato da API e ficam em inglês. O Fahrenheit é arredondado para uma casa decimal e o Kelvin para duas; a conversão para Kelvin usa `273`, conforme a fórmula do projeto.
 
 ## Rodando localmente
 
@@ -35,7 +39,7 @@ cp .env.example .env
 go run ./cmd/servidor
 ```
 
-O servidor lê `WEATHER_API_KEY` e `PORT` (8080 por padrão). O `.env` é carregado automaticamente quando existe; em produção, use as variáveis de ambiente do próprio Cloud Run.
+O servidor lê `WEATHER_API_KEY` e `PORT` (8080 por padrão). O `.env` é carregado automaticamente quando existe; no Cloud Run, a chave é injetada pelo Secret Manager.
 
 Também dá para rodar sem o arquivo:
 
@@ -47,8 +51,10 @@ WEATHER_API_KEY=sua_chave go run ./cmd/servidor
 
 ```bash
 docker build -t clima-por-cep .
-docker run --rm -p 8080:8080 -e WEATHER_API_KEY=sua_chave clima-por-cep
+docker run --rm -p 8080:8080 --env-file .env clima-por-cep
 ```
+
+O `--env-file .env` evita colocar a chave da WeatherAPI no histórico do shell.
 
 ## Testes
 
@@ -56,7 +62,14 @@ docker run --rm -p 8080:8080 -e WEATHER_API_KEY=sua_chave clima-por-cep
 go test ./...
 ```
 
-Os testes cobrem as conversões de temperatura, as regras do serviço (CEP inválido, CEP inexistente e falha dos fornecedores) e as respostas HTTP.
+Também é possível rodar os testes dentro da imagem de build:
+
+```bash
+docker build -t clima-por-cep-test --target build .
+docker run --rm clima-por-cep-test go test ./...
+```
+
+Os testes cobrem as conversões de temperatura, a validação de CEP, as respostas HTTP, o parsing das respostas do ViaCEP e da WeatherAPI e as falhas dos fornecedores.
 
 ## Deploy no Cloud Run
 

@@ -3,6 +3,7 @@ package weatherapi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -37,7 +38,7 @@ func (c *Cliente) TemperaturaAtual(cidade string) (float64, error) {
 
 	resp, err := c.cliente.Get(c.enderecoBase + "/v1/current.json?" + parametros.Encode())
 	if err != nil {
-		return 0, fmt.Errorf("consultando a WeatherAPI: %w", err)
+		return 0, fmt.Errorf("consultando a WeatherAPI: %w", semURL(err))
 	}
 	defer resp.Body.Close()
 
@@ -51,4 +52,18 @@ func (c *Cliente) TemperaturaAtual(cidade string) (float64, error) {
 	}
 
 	return dados.Current.Celsius, nil
+}
+
+// semURL remove a URL do erro para não levar a chave da API para logs e traces.
+func semURL(err error) error {
+	for {
+		var erroDeURL *url.Error
+		if !errors.As(err, &erroDeURL) {
+			return err
+		}
+		if erroDeURL.Err == nil {
+			return errors.New("falha de rede")
+		}
+		err = erroDeURL.Err
+	}
 }

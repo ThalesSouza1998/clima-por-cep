@@ -31,9 +31,9 @@ func TestHandlerClima(t *testing.T) {
 		{
 			nome:       "sucesso",
 			url:        "/?cep=01001000",
-			previsor:   previsorFalso{previsao: clima.Clima{Celsius: 28.5, Fahrenheit: 83.3, Kelvin: 301.65}},
+			previsor:   previsorFalso{previsao: clima.Clima{Celsius: 28.5, Fahrenheit: 83.3, Kelvin: 301.5}},
 			querStatus: http.StatusOK,
-			querCorpo:  map[string]any{"temp_C": 28.5, "temp_F": 83.3, "temp_K": 301.65},
+			querCorpo:  map[string]any{"temp_C": 28.5, "temp_F": 83.3, "temp_K": 301.5},
 		},
 		{
 			nome:       "cep inválido",
