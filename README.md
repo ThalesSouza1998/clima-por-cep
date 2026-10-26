@@ -60,17 +60,61 @@ Os testes cobrem as conversões de temperatura, as regras do serviço (CEP invá
 
 ## Deploy no Cloud Run
 
-```bash
-gcloud builds submit --tag gcr.io/SEU-PROJETO/clima-por-cep
+O serviço está publicado no projeto `clima-por-cep-512804`, região `us-central1`:
 
-gcloud run deploy clima-por-cep \
-  --image gcr.io/SEU-PROJETO/clima-por-cep \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars WEATHER_API_KEY=sua_chave
+https://clima-por-cep-429122214318.us-central1.run.app
+
+### APIs e repositório de imagens
+
+```bash
+gcloud config set project clima-por-cep-512804
+
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com secretmanager.googleapis.com
+
+gcloud artifacts repositories create clima-por-cep \
+  --repository-format=docker \
+  --location=us-central1 \
+  --description="Imagens do Clima por CEP"
 ```
 
-O Cloud Run injeta a variável `PORT`, então a única configuração extra é a chave da WeatherAPI.
+### Chave da WeatherAPI
+
+A chave não fica no código nem no comando de deploy. Ela é gravada no Secret Manager:
+
+```bash
+gcloud secrets create weather-api-key --replication-policy=automatic
+
+printf '%s' "$WEATHER_API_KEY" | \
+  gcloud secrets versions add weather-api-key --data-file=-
+```
+
+Quando a chave for rotacionada, basta adicionar uma nova versão ao mesmo segredo.
+
+A conta de serviço usada pelo Cloud Run precisa poder ler o segredo:
+
+```bash
+gcloud secrets add-iam-policy-binding weather-api-key \
+  --member="serviceAccount:429122214318-compute@developer.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
+### Build e deploy
+
+```bash
+gcloud builds submit \
+  --tag us-central1-docker.pkg.dev/clima-por-cep-512804/clima-por-cep/clima-por-cep:latest
+
+gcloud run deploy clima-por-cep \
+  --image us-central1-docker.pkg.dev/clima-por-cep-512804/clima-por-cep/clima-por-cep:latest \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-secrets WEATHER_API_KEY=weather-api-key:latest \
+  --min-instances 0 \
+  --max-instances 2
+```
+
+O Cloud Run injeta a variável `PORT`, então a aplicação usa a porta recebida pelo ambiente. Com `min-instances 0`, o serviço não fica consumindo recursos quando está sem tráfego.
 
 ## Organização
 
